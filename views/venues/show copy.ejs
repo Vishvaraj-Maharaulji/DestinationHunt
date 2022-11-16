@@ -1,0 +1,139 @@
+<% layout('layouts/boilerplate')%>
+
+<h1><%= venue.author.username %> </h1>
+<div id="venueCarousel" class="carousel slide w-50 h-25" data-bs-ride="carousel">
+  <div class="carousel-inner">
+    <% venue.images.forEach((img,i) => { %>
+    <div class="carousel-item <%= i === 0 ? "active" : "" %>">
+      <img src="<%= img.url %>" class="d-block w-100 img-fluid" alt="...">
+    </div>
+    <% }) %>
+  </div>
+  <% if(venue.images.length > 1) { %>
+  <button class="carousel-control-prev" type="button" data-bs-target="#venueCarousel" data-bs-slide="prev">
+    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Previous</span>
+  </button>
+  <button class="carousel-control-next" type="button" data-bs-target="#venueCarousel" data-bs-slide="next">
+    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Next</span>
+  </button>
+  <% } %>
+</div>
+
+<div id="map"></div>
+<p><%= venue.title %> </p>
+<p><%= venue.category %> </p>
+<p><%= venue.description %> </p>
+<p><%= venue.averageRating %> </p>
+<p><%= venue.location.city %> </p>
+<p><%= venue.location.state %> </p>
+<p><%= venue.location.country %> </p>
+
+<% if(currentUser && venue.author.equals(currentUser._id)) { %>
+<div>
+  <a href="/venues/<%= venue._id %>/edit">Edit</a>
+  <form action="/venues/<%= venue._id %>?_method=DELETE" method="POST">
+    <button>Delete</button>
+  </form>
+</div>
+<% } %>
+
+<% if(currentUser && venue.author.equals(currentUser._id)) { %>
+  <a href="/venues/<%= venue._id %>/events">Add an Event</a>
+  <h2>Add an Event</h2>
+  <form action="/venues/<%= venue._id %>/events" method="POST">
+    <div>
+      <label for="title">Title</label>
+      <input type="text" id="title" name="event[title]" required />
+    </div>
+
+    <div>
+    <label for="body">Body</label>
+    <textarea
+    name="event[body]"
+    id="body"
+    cols="30"
+    rows="5"
+    required
+    ></textarea>
+    </div>
+
+    <div>
+      <label for="date">Date</label>
+      <input type="datetime-local" id="date" name="event[date]" required />
+    </div>
+  
+    <button>Submit</button>
+  </form>
+<% } %>
+
+<% for(let event of venue.events) { %>
+  <div class="card mb-3">
+    <div class="card-body">
+      <p class="card-text">Author: <%= event.author.username %></p>
+      <p class="card-text">Title: <%= event.title %></p>
+      <p class="card-text">Body: <%= event.body %></p>
+      <p class="card-text">Date: <%= event.date %></p>
+      <% if(currentUser && event.author.equals(currentUser._id)) { %>
+      <form action="/venues/<%= venue._id %>/events/<%= event._id %>?_method=DELETE" method="POST">
+        <button class="btn btn-sm btn-danger">Delete</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<% if(currentUser) { %>
+<h2>Leave a Review</h2>
+<form action="/venues/<%= venue._id %>/reviews" method="POST" class="mb-5 validated-form">
+  <div class="mb-3">
+    <fieldset class="starability-basic">
+      <legend>Rating:</legend>
+      <!-- <input type="radio" id="no-rate" class="input-no-rate" name="review[rating]" value="1" checked                aria-label="No rating." /> -->
+      <input type="radio" id="first-rate1" name="review[rating]" value="1" checked />
+      <label for="first-rate1" title="Terrible">1 star</label>
+      <input type="radio" id="first-rate2" name="review[rating]" value="2" />
+      <label for="first-rate2" title="Not good">2 stars</label>
+      <input type="radio" id="first-rate3" name="review[rating]" value="3" />
+      <label for="first-rate3" title="Average">3 stars</label>
+      <input type="radio" id="first-rate4" name="review[rating]" value="4" />
+      <label for="first-rate4" title="Very good">4 stars</label>
+      <input type="radio" id="first-rate5" name="review[rating]" value="5" />
+      <label for="first-rate5" title="Amazing">5 stars</label>
+    </fieldset>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="body">Review</label>
+    <textarea class="form-control" name="review[body]" id="body" cols="30" rows="3" required></textarea>
+    <div class="valid-feedback">
+      Looks good!
+    </div>
+  </div>
+  <button class="btn btn-success">Submit</button>
+</form>
+<% for(let review of venue.reviews) { %>
+<div class="card mb-3">
+  <div class="card-body">
+    <h4><% review.author.username %> </h4>
+    <p class="starability-result" data-rating="<%= review.rating %>">
+      Rated: <%= review.rating %> stars
+    </p>
+    <p class="card-text">Author: <%= review.author.username %></p>
+    <p class="card-text">Review: <%= review.body %></p>
+    <% if(review.author.equals(currentUser._id)) { %>
+    <form action="/venues/<%= venue._id %>/reviews/<%= review._id %>?_method=DELETE" method="POST">
+      <button class="btn btn-sm btn-danger">Delete</button>
+    </form>
+    <% } %>
+  </div>
+</div>
+<% } %>
+<% } %>
+
+<script>
+  const mapBoxToken = "<%- process.env.MAPBOX_TOKEN %>";
+  const venue = <%- JSON.stringify(venue) %>
+</script>
+
+<script src="/javascripts/showPageMap.js"></script>

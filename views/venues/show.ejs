@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0"
+		/>
+		<title>Destination Hunt</title>
+		<link
+			href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+			rel="stylesheet"
+			integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+			crossorigin="anonymous"
+		/>
+
+		<script src="https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.js"></script>
+		<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+		<link
+			href="https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.css"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="/stylesheets/app.css" />
+		<link rel="stylesheet" href="/stylesheets/stars.css" />
+		<link rel="stylesheet" href="/stylesheets/showVenue.css" />
+	</head>
+	<body class="d-flex flex-column vh-100">
+		<!-- MODALS  -->
+
+		<div
+			class="modal fade"
+			id="addEvent"
+			tabindex="-1"
+			role="dialog"
+			aria-labelledby="addEventModalLabel"
+			aria-hidden="true"
+		>
+			<div
+				class="modal-dialog modal-dialog-centered rounded-6"
+				role="document"
+			>
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title font-weight-bold" id="addEventTitle">
+							ADD EVENT
+						</h4>
+					</div>
+					<div class="modal-body">
+						<div class="row">
+							<div class="col-12">
+								<form
+									action="/venues/<%= venue._id %>/events"
+									method="POST"
+								>
+									<div class="mb-3">
+										<label for="eventTitle" class="form-label"
+											>Title</label
+										>
+										<input
+											type="text"
+											class="form-control"
+											id="eventTitle"
+											name="event[title]"
+											required
+										/>
+									</div>
+
+									<div class="mb-3">
+										<label for="eventBody" class="form-label">Body</label>
+										<textarea
+											class="form-control"
+											name="event[body]"
+											id="body"
+											cols="30"
+											rows="5"
+											required
+										></textarea>
+									</div>
+									<div class="mb-3">
+										<label for="eventDate" class="form-label">Date</label>
+										<input
+											class="form-control"
+											type="datetime-local"
+											id="date"
+											name="event[date]"
+											required
+										/>
+									</div>
+									<div class="mb-3">
+										<button
+											type="button"
+											class="btn btn-danger"
+											data-bs-dismiss="modal"
+										>
+											Cancel
+										</button>
+										<button type="submit" class="btn btn-success">
+											Submit
+										</button>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div
+			class="modal fade"
+			id="showEvents"
+			tabindex="-1"
+			role="dialog"
+			aria-labelledby="showEventModalLabel"
+			aria-hidden="true"
+		>
+			<div
+				class="modal-dialog modal-dialog-centered rounded-6"
+				role="document"
+			>
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title font-weight-bold" id="addEventTitle">
+							Events
+						</h4>
+					</div>
+					<div class="modal-body">
+						<% if(venue.events.length === 0) { %>
+						<p class="display-4 lead">No Events Available</p>
+						<% } %> <% for(let event of venue.events) { %>
+						<div class="row">
+							<div class="col-12">
+								<div class="card mb-3 rouned-0 border border-dark">
+									<div class="card-body">
+										<div class="row">
+											<h5 class="card-title col-9">
+												<a
+													href="/events#event<%= event._id %>"
+													class="event-link"
+													><%=event.title%></a
+												>
+											</h5>
+											<% if(currentUser &&
+											event.author.equals(currentUser._id)) { %>
+											<form
+												class="col-3"
+												action="/venues/<%= venue._id %>/events/<%= event._id %>?_method=DELETE"
+												method="POST"
+											>
+												<button
+													class="btn btn-sm btn-outline-dark mx-auto"
+												>
+													Delete
+												</button>
+											</form>
+											<%}%>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<% } %>
+					</div>
+					<div class="modal-footer">
+						<button
+							type="button"
+							class="btn btn-danger"
+							data-bs-dismiss="modal"
+						>
+							Close
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div
+			class="modal fade"
+			id="maps"
+			tabindex="-1"
+			role="dialog"
+			aria-labelledby="addEventModalLabel"
+			aria-hidden="true"
+		>
+			<div
+				class="modal-dialog modal-dialog-centered rounded-6"
+				role="document"
+			>
+				<div class="modal-content">
+					<div class="modal-title">
+						<div id="menu" class="py-2 d-flex justify-content-around">
+							<div>
+								<input
+									id="satellite-v9"
+									type="radio"
+									name="rtoggle"
+									value="satellite"
+								/>
+								<label class="fw-bold" for="satellite-v9">satellite</label>
+							</div>
+							<div>
+								<input
+									id="light-v10"
+									type="radio"
+									name="rtoggle"
+									value="light"
+								/>
+								<label class="fw-bold" for="light-v10">light</label>
+							</div>
+							<div>
+								<input
+									id="dark-v10"
+									type="radio"
+									name="rtoggle"
+									value="dark"
+								/>
+								<label class="fw-bold" for="dark-v10">dark</label>
+							</div>
+							<div>
+								<input
+									id="streets-v11"
+									type="radio"
+									name="rtoggle"
+									value="streets"
+									checked="checked"
+								/>
+								<label class="fw-bold" for="streets-v11">streets</label>
+							</div>
+							<div>
+								<input
+									id="outdoors-v11"
+									type="radio"
+									name="rtoggle"
+									value="outdoors"
+								/>
+								<label class="fw-bold" for="outdoors-v11">outdoors</label>
+							</div>
+						</div>
+					</div>
+					<div class="modal-body" id="map"></div>
+					<div class="modal-footer">
+						<button
+							type="button"
+							class="btn btn-danger"
+							data-bs-dismiss="modal"
+						>
+							Close
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div
+			class="modal fade"
+			id="bookARide"
+			tabindex="-1"
+			role="dialog"
+			aria-labelledby="bookARideModalLabel"
+			aria-hidden="true"
+		>
+			<div
+				class="modal-dialog modal-dialog-centered rounded-6"
+				role="document"
+			>
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title font-weight-bold" id="bookARideTitle">
+							Travel Info
+						</h4>
+					</div>
+					<div class="modal-body">
+            <div class="table-responsive">
+              <table class="table table-striped align-middle table-bordered text-center">
+							  <thead>
+								  <tr class="align-middle">
+									  <th rowspan="2">#</td>
+									  <th rowspan="2">Vehicle</td>
+									  <th rowspan="2">Capacity</td>
+								  	<th colspan="2">Price (Per KM)</td>
+							  	</tr>
+						  		<tr>
+					  				<th>For 20 KMs</td>
+				  					<th>After 20 KMs</td>
+			  					</tr>
+		  					</thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">1</th>
+                    <td>Bike</td>
+                    <td>1</td>
+                    <td>&#8377;6</td>
+                    <td>&#8377;8</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">2</th>
+                    <td>Auto</td>
+                    <td>2-3</td>
+                    <td>&#8377;8</td>
+                    <td>&#8377;11</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">3</th>
+                    <td>Prime Sedan</td>
+                    <td>4</td>
+                    <td>&#8377;15</td>
+                    <td>&#8377;20</td>
+                  </tr>
+                 <tr>
+                    <th scope="row">4</th>
+                    <td>Prime SUV</td>
+                    <td>5-6</td>
+                    <td>&#8377;25</td>
+                    <td>&#8377;30</td>
+                  </tr>
+                </tbody>
+  						</table>
+            </div>
+						<div
+							id="travelMenu"
+							class="py-2 d-flex justify-content-around"
+						>
+							<div>
+								<input
+									id="bike"
+									type="radio"
+									name="traveltoggle"
+									value="bike"
+								/>
+								<label class="fw-bold" for="bike">Bike</label>
+							</div>
+							<div>
+								<input
+									id="auto"
+									type="radio"
+									name="traveltoggle"
+									value="auto"
+								/>
+								<label class="fw-bold" for="auto">Auto</label>
+							</div>
+							<div>
+								<input
+									id="sedan"
+									type="radio"
+									name="traveltoggle"
+									value="sedan"
+								/>
+								<label class="fw-bold" for="sedan">Prime Sedan</label>
+							</div>
+							<div>
+								<input
+									id="suv"
+									type="radio"
+									name="traveltoggle"
+									value="suv"
+								/>
+								<label class="fw-bold" for="suv">Prime SUV</label>
+							</div>
+						</div>
+						<div id="rideBody"></div>
+					</div>
+					<div class="modal-footer">
+						<button
+							type="button"
+							class="btn btn-danger"
+							data-bs-dismiss="modal"
+						>
+							Close
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!--MODALS ENDS-->
+		<!-- navbar -->
+		<nav class="navbar sticky-top navbar-expand-lg bg-dark">
+			<div class="container-fluid">
+				<a class="navbar-brand" href="#">DestinationHunt</a>
+				<button
+					class="navbar-toggler"
+					type="button"
+					data-bs-toggle="collapse"
+					data-bs-target="#navbarNavAltMarkup"
+					aria-controls="navbarNavAltMarkup"
+					aria-expanded="false"
+					aria-label="Toggle navigation"
+				>
+					<img
+						src="https://res.cloudinary.com/dr3bbn6yy/image/upload/c_scale,h_32,w_32/v1667885660/DestinationHunt/icons8-expand-arrow-64_ilz7zv.png"
+					/>
+				</button>
+				<div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+					<div class="navbar-nav">
+						<a class="nav-link" href="/">Home</a>
+						<a class="nav-link" href="/venues">Venues</a>
+						<a class="nav-link" href="/venues/new">New</a>
+
+						<a class="nav-link" href="/events">Events</a>
+					</div>
+					<div class="navbar-nav ms-auto">
+						<% if(!currentUser){ %>
+						<a class="nav-link" href="/login">Login</a>
+						<a class="nav-link" href="/register">Register</a>
+						<%}else{ %>
+						<ul class="navbar-nav me-2">
+							<li class="nav-item dropdown">
+								<a
+									class="nav-link dropdown-toggle"
+									href="#"
+									id="userLink"
+									role="button"
+									data-bs-toggle="dropdown"
+									aria-expanded="false"
+								>
+									<%= currentUser.username %>
+								</a>
+								<ul
+									class="dropdown-menu dropdown-menu-dark"
+									aria-labelledby="userLink"
+								>
+									<li>
+										<a
+											class="dropdown-item"
+											href="/<%= currentUser._id %>/profile"
+											>Profile</a
+										>
+									</li>
+									<li>
+										<hr class="dropdown-divider" />
+									</li>
+									<li>
+										<a class="dropdown-item" href="/logout">Logout</a>
+									</li>
+								</ul>
+							</li>
+						</ul>
+						<% } %>
+					</div>
+				</div>
+			</div>
+		</nav>
+
+		<header>
+			<div>
+				<div
+					id="venueCarousel"
+					class="carousel slide"
+					data-bs-ride="carousel"
+				>
+					<div class="carousel-inner">
+						<% venue.images.forEach((img,i)=>{ %>
+						<div class="carousel-item <%=i===0 ?'active':'' %>">
+							<div>
+								<img
+									class="carousel-img w-100"
+									src="<%=img.url%>"
+									alt="..."
+								/>
+							</div>
+						</div>
+						<% }) %>
+					</div>
+					<% if(venue.images.length>1){ %>
+					<button
+						class="carousel-control-prev"
+						type="button"
+						data-bs-target="#venueCarousel"
+						data-bs-slide="prev"
+					>
+						<span
+							class="carousel-control-prev-icon"
+							aria-hidden="true"
+						></span>
+						<span class="visually-hidden">Previous</span>
+					</button>
+					<button
+						class="carousel-control-next"
+						type="button"
+						data-bs-target="#venueCarousel"
+						data-bs-slide="next"
+					>
+						<span
+							class="carousel-control-next-icon"
+							aria-hidden="true"
+						></span>
+						<span class="visually-hidden">Next</span>
+					</button>
+					<% } %>
+				</div>
+			</div>
+		</header>
+
+		<main class="container-fluid my-5">
+			<div class="row">
+				<div class="col-lg-4 my-3">
+					<% if(currentUser && venue.author.equals(currentUser._id)) { %>
+					<div class="row mx-5">
+						<div class="col">
+							<button
+								type="button"
+								class="btn btn-outline-dark w-100 py-3 rounded-3 shadow"
+								data-bs-toggle="modal"
+								data-bs-target="#addEvent"
+							>
+								Add Event
+							</button>
+						</div>
+					</div>
+					<% } %>
+					<div class="row mx-5">
+						<div class="col">
+							<button
+								type="button"
+								class="btn btn-outline-dark w-100 py-3 rounded-3 shadow"
+								data-bs-toggle="modal"
+								data-bs-target="#showEvents"
+							>
+								Venue Events
+							</button>
+						</div>
+					</div>
+					<div class="row mx-5">
+						<div class="col">
+							<button
+								type="button"
+								class="btn btn-outline-dark w-100 py-3 rounded-3 shadow"
+								data-bs-toggle="modal"
+								data-bs-target="#maps"
+							>
+								Maps
+							</button>
+						</div>
+					</div>
+					<div class="row mx-5">
+						<div class="col">
+							<button
+								id="bookButton"
+								type="button"
+								class="btn btn-outline-dark w-100 py-3 rounded-3 shadow"
+								data-bs-toggle="modal"
+								data-bs-target="#bookARide"
+							>
+								Travel Info
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-lg-8 my-3">
+					<div class="row mx-5">
+						<div class="col">
+							<div class="card shadow w-100">
+								<div class="card-header">
+									<div class="card-title fs-3 fw-bolder">
+										<%= venue.title %>
+									</div>
+									<div class="card-subtitle fs-4 text-muted">
+										<%= venue.category %>
+									</div>
+								</div>
+								<div class="card-body">
+									<p class="fs-5"><%= venue.description %></p>
+									<p class="fs-5 d-flex align-items-center">
+										Rating : <% if(venue.averageRating === 0) { %> Not Yet
+										Rated!<% } else { %> <%= venue.averageRating.toFixed(1)
+										%>&nbsp; (<%= venue.reviews.length %> Reviews)
+										&nbsp;&nbsp;
+										<i
+											class="mb-2"
+											data-star="<%= venue.averageRating.toFixed(1) %>"
+										></i>
+										<% } %>
+									</p>
+									<p class="fs-5">
+										Location : <%=venue.location.address%>
+									</p>
+									<p class="fs-5">
+										<%= venue.location.city %>, <%= venue.location.state
+										%>, <%= venue.location.country %>
+									</p>
+								</div>
+								<% if(currentUser && venue.author.equals(currentUser._id))
+								{ %>
+								<div class="card-footer">
+									<div class="row">
+										<div class="col-md-6">
+											<a
+												class="btn btn-outline-warning w-100 my-1"
+												href="/venues/<%= venue._id %>/edit"
+												>Edit</a
+											>
+										</div>
+										<div class="col-md-6">
+											<form
+												action="/venues/<%= venue._id %>?_method=DELETE"
+												method="POST"
+											>
+												<button class="btn btn-outline-danger w-100 my-1">
+													Delete
+												</button>
+											</form>
+										</div>
+									</div>
+								</div>
+								<% } %>
+							</div>
+						</div>
+					</div>
+
+					<div class="row my-5 mx-5">
+						<div class="col">
+							<div class="card shadow w-100">
+								<div class="card-header">
+									<div class="card-title fs-3 fw-bolder">
+										<% if(currentUser) { %> Leave a Review <% } else {%>
+										Reviews <% } %>
+									</div>
+								</div>
+								<% if(currentUser) { %>
+								<div class="card-body">
+									<form
+										action="/venues/<%= venue._id %>/reviews"
+										method="POST"
+										class="my-3 validated-form"
+									>
+										<div>
+											<fieldset class="starability-basic">
+												<input
+													type="radio"
+													id="first-rate1"
+													name="review[rating]"
+													value="1"
+													checked
+												/>
+												<label for="first-rate1" title="Terrible"
+													>1 star</label
+												>
+												<input
+													type="radio"
+													id="first-rate2"
+													name="review[rating]"
+													value="2"
+												/>
+												<label for="first-rate2" title="Not good"
+													>2 stars</label
+												>
+												<input
+													type="radio"
+													id="first-rate3"
+													name="review[rating]"
+													value="3"
+												/>
+												<label for="first-rate3" title="Average"
+													>3 stars</label
+												>
+												<input
+													type="radio"
+													id="first-rate4"
+													name="review[rating]"
+													value="4"
+												/>
+												<label for="first-rate4" title="Very good"
+													>4 stars</label
+												>
+												<input
+													type="radio"
+													id="first-rate5"
+													name="review[rating]"
+													value="5"
+												/>
+												<label for="first-rate5" title="Amazing"
+													>5 stars</label
+												>
+											</fieldset>
+										</div>
+										<div class="mb-3">
+											<textarea
+												class="form-control"
+												name="review[body]"
+												id="body"
+												cols="30"
+												rows="3"
+												required
+											></textarea>
+											<div class="valid-feedback">Looks good!</div>
+										</div>
+										<button class="btn btn-success">Submit</button>
+									</form>
+								</div>
+								<%}%> <% for(let review of venue.reviews) { %>
+								<div class="card-footer pt-3 pb-4">
+									<div class="row">
+										<div class="col text-start">
+											<a
+												href="/<%= review.author._id %>/profile"
+												class="card-link text-decoration-none text-primary fs-4"
+											>
+												<%= review.author.username %>
+											</a>
+										</div>
+										<div class="col text-end">
+											<p class="card-text text-dark"><%= review.date %></p>
+										</div>
+									</div>
+
+									<p
+										class="starability-result"
+										data-rating="<%= review.rating %>"
+									>
+										Rated: <%= review.rating %> stars
+									</p>
+
+									<p class="card-text fs-5 fw-bold"><%= review.body %></p>
+									<% if(currentUser &&
+									review.author.equals(currentUser._id)) { %>
+									<form
+										action="/venues/<%= venue._id %>/reviews/<%= review._id %>?_method=DELETE"
+										method="POST"
+									>
+										<button class="btn btn-sm btn-outline-danger w-25">
+											Delete
+										</button>
+									</form>
+									<% } %>
+								</div>
+								<% } %>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</main>
+
+		<footer class="footer bg-dark py-2 mt-auto">
+			<div class="container text-center">
+				<span class="text-light">&copy; 2022 DestinationHunt</span>
+			</div>
+		</footer>
+
+		<script>
+			mapBoxToken = "<%- process.env.MAPBOX_TOKEN %>"
+			venue = <%- JSON.stringify(venue) %>
+		</script>
+		<script src="/javascripts/showPageMap.js"></script>
+		<script src="/javascripts/travelInfo.js"></script>
+
+		<script
+			src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"
+			integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p"
+			crossorigin="anonymous"
+		></script>
+		<script
+			src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js"
+			integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF"
+			crossorigin="anonymous"
+		></script>
+
+		<script src="/javascripts/validateForms.js"></script>
+	</body>
+</html>

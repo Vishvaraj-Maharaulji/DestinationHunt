@@ -1,0 +1,33 @@
+.navbar-brand,
+.nav-link {
+	color: white;
+}
+
+.navbar-brand:hover,
+.nav-link:hover,
+.event-link:hover {
+	color: rgb(45, 198, 240);
+}
+
+.navbar-toggler:hover,
+.navbar-toggler:active {
+	color: white;
+}
+
+.carousel-img {
+	height: 20rem;
+}
+
+.form-label {
+	font-weight: 700;
+	margin-bottom: 2 rem;
+}
+
+.form-control {
+	font-weight: 500;
+}
+
+.event-link {
+	color: black;
+	text-decoration: none;
+}
