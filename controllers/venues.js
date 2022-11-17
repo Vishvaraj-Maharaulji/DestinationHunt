@@ -74,6 +74,9 @@ module.exports.filter = async (req, res) => {
 
 	if (req.body.sort === "rating") {
 		venues.sort((a, b) => {
+			if (b.averageRating === a.averageRating) {
+				return b.reviews.length - a.reviews.length;
+			}
 			return b.averageRating - a.averageRating;
 		});
 	}
